@@ -78,7 +78,7 @@ async sendMessage() {
                 messages: [
                     {role: "user", content: "Previous conversation:\n" + memories + "\n\nNew message: " + message}
                 ],
-                api_key: "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"
+                api_key: "sk-ant-CLAUDE CHANGE HERE"
             })
         });
 
