@@ -39,35 +39,63 @@ class MemoryChat {
         }
     }
     
-    async sendMessage() {
-        const message = this.messageInput.value.trim();
-        if (!message) return;
+async sendMessage() {
+    const message = this.messageInput.value.trim();
+    if (!message) return;
+    
+    // Display message immediately
+    this.displayMessage('You', message);
+    this.messageInput.value = '';
+    
+    try {
+        // Send to Memory Garden backend
+        const response = await fetch(`${API_URL}/memory/store`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content: message,
+                user_id: "You",
+                metadata: {}
+            })
+        });
         
-        // Display message immediately
-        this.displayMessage('You', message);
-        this.messageInput.value = '';
+        if (!response.ok) throw new Error('Failed to save message');
         
-        try {
-            // Send to Memory Garden backend
-            const response = await fetch(`${API_URL}/memory/store`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    content: message,
-                    user_id: "You",
-                    metadata: {}
-                })
-            });
-            
-            if (!response.ok) throw new Error('Failed to save message');
-            
-            this.updateStatus('Message saved', 'success');
-        } catch (error) {
-            this.updateStatus('Error: ' + error.message, 'error');
+        this.updateStatus('Message saved', 'success');
+        
+        // Get conversation history for context
+        const memories = this.chatHistory.innerText || '';
+
+        // Get Claude's response
+        const aiResponse = await fetch(`${API_URL}/claude/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                messages: [
+                    {role: "user", content: "Previous conversation:\n" + memories + "\n\nNew message: " + message}
+                ],
+                api_key: "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"
+            })
+        });
+
+        const aiData = await aiResponse.json();
+        console.log('Claude response:', aiData);
+        if (aiData.content && aiData.content[0]) {
+            this.displayMessage('Claude', aiData.content[0].text);
+        } else if (aiData.error) {
+            this.displayMessage('Claude', 'Error: ' + aiData.error.message);
+        } else {
+            this.displayMessage('Claude', 'Unexpected response format');
         }
+        
+    } catch (error) {
+        this.updateStatus('Error: ' + error.message, 'error');
     }
+}
     
     async loadHistory() {
         try {
